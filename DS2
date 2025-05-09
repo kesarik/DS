@@ -1,0 +1,84 @@
+ReverseClient.java
+import ReverseModule.*;
+import org.omg.CORBA.*;
+import org.omg.CosNaming.*;
+import java.io.*;
+
+public class ReverseClient {
+  public static void main(String[] args) {
+    try {
+      ORB orb = ORB.init(args, null);
+      NamingContextExt ncRef = NamingContextExtHelper.narrow(
+        orb.resolve_initial_references("NameService")
+      );
+      Reverse reverse = ReverseHelper.narrow(ncRef.resolve_str("Reverse"));
+
+      System.out.print("Enter String: ");
+      BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+      String input = br.readLine();
+
+      System.out.println(reverse.reverse_string(input));
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+}
+
+ReverseServer.java=>
+import ReverseModule.*;
+import org.omg.CORBA.*;
+import org.omg.CosNaming.*;
+import org.omg.PortableServer.*;
+
+public class ReverseServer {
+  public static void main(String[] args) {
+    try {
+      ORB orb = ORB.init(args, null);
+      POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+      rootPOA.the_POAManager().activate();
+
+      ReverseImpl reverseImpl = new ReverseImpl();
+      org.omg.CORBA.Object ref = rootPOA.servant_to_reference(reverseImpl);
+      Reverse hRef = ReverseHelper.narrow(ref);
+
+      NamingContextExt ncRef = NamingContextExtHelper.narrow(
+        orb.resolve_initial_references("NameService")
+      );
+      ncRef.rebind(ncRef.to_name("Reverse"), hRef);
+
+      System.out.println("Reverse Server ready and waiting...");
+      orb.run();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+}
+ReverseImpl.java
+import ReverseModule.ReversePOA;
+
+class ReverseImpl extends ReversePOA {
+  public ReverseImpl() {
+    System.out.println("Reverse Object Created");
+  }
+
+  public String reverse_string(String name) {
+    return "Server Send " + new StringBuffer(name).reverse().toString();
+  }
+}
+
+
+ReverseModule.idl
+module ReverseModule {
+  interface Reverse {
+    string reverse_string(in string str);
+  };
+};
+
+Run command=>
+idlj -fall ReverseModule.idl
+javac ReverseModule/*.java ReverseImpl.java ReverseServer.java ReverseClient.java
+tnameserv -ORBInitialPort 1050
+
+java ReverseServer -ORBInitialPort 1050 -ORBInitialHost localhost(new terminal)
+java ReverseClient -ORBInitialPort 1050 -ORBInitialHost localhost(new terminal)
+
