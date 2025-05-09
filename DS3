@@ -1,0 +1,57 @@
+#include<stdio.h>
+#include<mpi.h>
+#define N 10
+
+int main(int argc,char* argv[])
+{
+	int size,rank,local_array[1000],num_recv,sum=0;
+	int array[N]={1,2,3,4,5,6,7,8,9,10};
+	
+	MPI_Init(&argc,&argv);
+	MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+	MPI_Comm_size(MPI_COMM_WORLD,&size);
+	
+	int chunk=N/size;
+	
+	if(rank==0)
+	{
+		for(int i=1;i<size;i++)
+		{
+			int start=i*chunk;
+			int count=(i==size-1)?(N-start):chunk;
+			MPI_Send(&count,1,MPI_INT,i,0,MPI_COMM_WORLD);
+			MPI_Send(&array[start],count,MPI_INT,i,0,MPI_COMM_WORLD);
+			printf("Master send %d elemnts to process %d\n",count,i);
+		}
+		for(int i=0;i<chunk;i++)
+		{
+			sum+=array[i];
+		}
+		printf("Master process (rank %d) partial sum is:%d\n",rank,sum);
+		int temp;
+		for(int i=1;i<size;i++)
+		{
+				MPI_Recv(&temp,1,MPI_INT,i,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+				printf("master recive %d partial sum from %d:\n",temp,i);
+				sum+=temp;
+		}
+		printf("Total sum is:%d\n",sum);
+	}
+	else{
+		MPI_Recv(&num_recv,1,MPI_INT,0,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+		MPI_Recv(local_array,num_recv,MPI_INT,0,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+		int local_sum=0;
+		for(int i=0;i<num_recv;i++)
+		{
+			local_sum+=local_array[i];
+		}
+		printf("process %d recived %d elements,partial sum:%d\n",rank,num_recv,local_sum);
+		MPI_Send(&local_sum,1,MPI_INT,0,0,MPI_COMM_WORLD);
+	}
+	MPI_Finalize();
+	return 0;
+}
+
+RUN=>
+  mpicc -o Ass3 Ass3.c
+	mpirun -np 3 ./Ass3
