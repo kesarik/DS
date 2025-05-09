@@ -1,0 +1,154 @@
+LeaderElection.java(Bully)
+import java.util.*;
+
+public class LeaderElection{
+	public static void main(String[] args)
+	{
+		Scanner sc=new Scanner(System.in);
+		
+		System.out.print("Enter the number of processes:");
+		int n=sc.nextInt();
+		
+		boolean[] isActive=new boolean[n+1];
+		Arrays.fill(isActive,true);
+		
+		int oldleader=n;
+		isActive[n]=false;
+		System.out.println("Process "+ n +" has failed.");
+		
+		System.out.print("Enter the process to start election:");
+		int starter=sc.nextInt();
+		
+		//optionally fail another process
+		System.out.print("Enter another process to fail(0 if none):");
+		int fail=sc.nextInt();
+		if(fail!=0) isActive[fail]=false;
+		
+		int newleader=-1;
+		for(int i=starter;i<=n;i++)
+		{
+			if(isActive[i]==true)
+			{
+				for(int j=i+1;j<=n;j++)
+				{
+					if(isActive[j]==true)
+					{
+								System.out.println("Process "+i +" send election Process to "+j);
+				System.out.println("Process "+j+" replies with OK to process "+i);
+				newleader=Math.max(newleader,j);	
+					}
+				}
+				if(newleader<i){
+					newleader=i;
+				}
+			}
+		}
+		
+		  // Inform all other active processes
+		System.out.println(" The new leader is the "+newleader+" Process");
+		for(int i=1;i<=n;i++)
+		{
+			if(isActive[i] && i!=newleader)
+			{
+				System.out.println("Process "+newleader+ "sends coordinator message to process   "+i);
+			}
+		}
+		sc.close();		
+	}
+}
+
+RingLeaderElection.java(ring)
+import java.util.*;
+public class RingLeaderElection{
+	public static void main(String[] args)
+	{
+		Scanner sc=new Scanner(System.in);
+		
+		System.out.print("Enter the number of Processes:");
+		int n=sc.nextInt();
+		
+		boolean[] isActive=new boolean[n+1];
+		Arrays.fill(isActive,true);
+		
+		int oldleader=n;
+		isActive[oldleader]=false;
+		System.out.println("Process that failed as:"+ oldleader);
+		
+		System.out.print("Enter the process to start:");
+		int starter=sc.nextInt();
+		
+		System.out.print("Enter the process for failed(0 if none):");
+		int fail=sc.nextInt();
+		if(fail!=0) isActive[fail]=false;
+		
+		int[] msg=new int[n+1];// Array to store the IDs of all active processes that participate in the election
+		int i=starter;
+		int idx=0;//index to insert into msg
+		System.out.println("Election process start from "+starter);
+		
+		do{
+			if(isActive[i]==true)
+			{
+				msg[idx++]=i;
+				int next=(i%n)+1;
+				while(isActive[next]==false) next=(next%n)+1;
+				System.out.println("Process "+i+" send election Process to  "+next);
+				printmsg(msg,idx);
+			}
+			i=(i % n) + 1;;
+		}while(i!=starter);
+		
+		int newleader=0;
+		for(i=0;i<msg.length;i++)
+		{
+			if(msg[i]>newleader)
+			{
+				newleader=msg[i];
+			}
+		}
+		
+		//Sending the Coordinator Message
+		for(int p=1;p<=n;p++)
+		{
+			if(isActive[p]==true && newleader!=p)
+			{
+				System.out.println("Process "+newleader+" sends coordinator (" +newleader+ ")  message to process  "+p);
+			}
+		}
+		sc.close();
+	}
+	static void printmsg(int arr[],int size)
+	{
+		System.out.print("[");
+		for(int i=0;i<size;i++)
+		{
+			if(arr[i]!=0) System.out.print(arr[i]+" ");
+		}
+		System.out.println("]");
+	}
+}
+
+Command To run:-
+1)Install:-
+sudo apt update
+sudo apt install default-jdk -y
+
+2)Compile the program:-
+javac LeaderElection.java
+javac RingLeaderElection.java
+3)Run the program:-
+java LeaderElection
+java RingLeaderElection
+
+/*
+do while loop=
+Start from the initiator and move through the ring (i = (i % n) + 1) to simulate circular behavior.
+Each active process appends its ID to the msg array.
+It then sends the election message to the next active process.
+The loop ends when the message comes back to the initiator, forming a full ring traversal.
+
+newledaer=Out of all active processes that participated in the election (stored in msg), the process with the highest ID becomes the new coordinator (leader)
+
+Sending the Coordinator Message=
+The new leader now informs all other active processes (except itself) that it is the new coordinator.
+This simulates the broadcast of the "Coordinator" message in a distributed system.*/
