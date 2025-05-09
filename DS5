@@ -1,0 +1,61 @@
+import java.util.*;
+public class TokenRing{
+	public static void main(String[] args)
+	{
+		char choice;
+		Scanner sc=new Scanner(System.in);
+		do{
+			System.out.println("1.Start TokenRing Communication.!!!");
+			System.out.println("Enter your choice");
+			int ch=sc.nextInt();
+			sc.nextLine();
+			switch(ch)
+			{
+				case 1:
+					System.out.println("Enter the message:");
+					String message=sc.nextLine();
+					
+					System.out.println("Enter the number of processes:");
+					int n=sc.nextInt();
+					for(int i=1;i<=n;i++)
+					{
+						System.out.println(i+" ");
+					}
+					System.out.println("Enter the sender:");
+					int sender=sc.nextInt();
+					System.out.println("Enter the receiver:");
+					int receiver=sc.nextInt();
+					
+					System.out.println("Sender Process is:"+sender);
+					System.out.println("The token is received by sender");
+					System.out.println("The meessage to be sent is:"+message);
+					int i=sender%n+1;
+					while(true)
+					{
+						 System.out.println("Token passed through: " + i);
+						 if(i==receiver)
+						 {
+						 System.out.println("The token is received by Receiver");
+						 	System.out.println("Receiver Process is:"+receiver);
+					System.out.println("The meessage to be sent is:"+message);	
+					break;
+						 }
+						 i=(i%n)+1;
+					}
+					break;
+				default:
+					System.out.println("Invalid Choice");
+					break;
+			}
+			System.out.println("Do you want to continue:");
+			choice=sc.next().charAt(0);
+						
+		}while(choice=='y' || choice=='Y');
+		sc.close();
+		
+}
+}
+
+Command to run:-
+1)javac TokenRing.java
+2)java TokenRing
