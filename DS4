@@ -1,0 +1,156 @@
+ClockClient.py
+import socket,datetime,time,threading
+from dateutil import parser
+
+def send_time(sock):
+	while True:
+		sock.send(str(datetime.datetime.now()).encode())
+		print("Time sent")
+		time.sleep(5)
+
+def receive_time(sock):
+	while True:
+		synced=parser.parse(sock.recv(1024).decode())
+		print(f"Synchronized Time:{synced}\n")
+	
+def start_client(port=8080):
+	sock=socket.socket()
+	sock.connect(('127.0.0.1',port))
+	print("Conntected to server!!\n")
+	threading.Thread(target=send_time,args=(sock,)).start()
+	threading.Thread(target=receive_time,args=(sock,)).start()
+
+if __name__=='__main__':
+	start_client()
+
+
+ClockServer.py
+import socket,threading,datetime,time
+from dateutil import parser
+
+client_data={}
+
+def handle_client(conn,addr):
+	while True:
+		clock=parser.parse(conn.recv(1024).decode())
+		diff=datetime.datetime.now()-clock
+		client_data[addr]={"clock":clock,"diff":diff,"conn":conn}
+		print(f"updated client is:{addr}\n")
+		time.sleep(5)
+
+def accept_client(server):
+	while True:
+		conn,addr=server.accept()
+		addr_str=f"{addr[0]}:{addr[1]}"
+		print(f"{addr_str} connected")
+		threading.Thread(target=handle_client,args=(conn,addr_str)).start()
+
+def get_avg_diff():
+	if not client_data:return datetime.timedelta()
+	total=sum((c["diff"] for c in client_data.values()),datetime.timedelta())
+	return total/len(client_data)		
+	
+def sync_clock():
+	while True:
+		print(f"\nSync Cycle Started. clients:{len(client_data)}")
+		if client_data:
+			avg=get_avg_diff()
+			for addr,c in client_data.items():
+				try:
+					c["conn"].send(str(datetime.datetime.now()+avg).encode())
+				except:
+					print(f"Failed to sync with:{addr}")
+		else:
+			print(f"No client connected")
+		time.sleep(5)
+
+def start_server(port=8080):
+	server=socket.socket()
+	server.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+	server.bind(('',port))
+	server.listen(10)
+	print(f"Clock server running.!!\n")
+	threading.Thread(target=accept_client,args=(server,)).start()
+	threading.Thread(target=sync_clock).start()
+
+if __name__=='__main__':
+	start_server()
+
+Command to run:-
+1)Install this first lib:-
+sudo apt update
+sudo apt install python3 python3-pip -y
+pip3 install python-dateutil
+2)python3 ClockServer.py //run on first terminal
+3)python3 ClockClient.py //run on another terminal
+
+NOTES=>
+CLIENT:
+
+imports:
+socket: Allows network communication between client and server.
+threading: Used to run multiple parts of the program at the same time.
+datetime: To get the current date and time.
+time: For using delays (like sleep).
+parser from dateutil: Converts a date/time string back into a datetime object.
+
+send_time(sock) function:
+Sends the current time (datetime.datetime.now()) to the server through the socket.
+str(...).encode() converts the time into bytes so it can be sent over the network.
+
+receive_time(sock) function:
+Cotinuously receives data from the server.
+sock.recv(1024) reads up to 1024 bytes of data.
+.decode() converts bytes back to a string.
+parser.parse(...) converts the string into a datetime object.
+
+start_client(port=8080) function:
+Creates a socket to communicate with the server.
+Connects to the server on IP address 127.0.0.1 (localhost) and port 8080.
+Prints "Connected to server".
+
+This ensures that start_client() only runs when this script is executed directly 
+
+SERVER=
+
+client_data is a dictionary to store information about each connected client
+
+handle_client(conn, addr) function:
+Continuously runs for each client.
+Receives time from the client.
+Parses it into a datetime object.
+Calculates the time difference between the server’s clock and the client’s clock.
+Stores the client’s info in the client_data dictionary.
+
+accept_clients(server) function:
+Runs in a loop, waiting for new client connections.
+Once a client connects, it gets their conn (socket) and addr (IP and port).
+Starts a new thread to handle that client using handle_client.
+
+get_avg_diff() function:
+Calculates the average time difference between all clients and the server.
+If there are no clients, returns 0 time difference.
+Sums all time differences, then divides by the number of clients.
+
+sync_clocks() function:
+Runs in a loop.
+ Prints number of clients and starts a synchronization cycle.
+If there are connected clients:
+Gets average time difference.
+Sends a corrected time (server’s current time + average difference) to each client.
+If no clients are connected, it prints that message.
+
+start_server(port=8080) function:
+Creates a server socket.
+Sets it to allow reuse of the port immediately after restart.
+Binds the server to all IP addresses ('') on port 8080.
+Listens for up to 10 incoming connections.
+Prints that the server is running.
+
+
+OUTPUT:
+The client received a corrected time from the server.
+The client originally sends its own local time to the server every 5 seconds.
+The server calculates how far off the client's time is compared to the server's time.
+Then, in the "sync cycle", the server sends back a synchronized time (usually server time + average difference from all clients).
+ The client receives this synchronized time, 
